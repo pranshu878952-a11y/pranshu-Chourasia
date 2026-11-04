@@ -1,0 +1,1444 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="light dark" />
+<meta name="description" content="Upload any photo and investigate where and when it was taken — hidden EXIF metadata, sun position, and AI visual and reflection clues, with honest confidence levels." />
+<meta name="theme-color" content="#b45309" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Photo Investigator — where was this photo taken?" />
+<meta property="og:description" content="Metadata, sun position and AI visual clues turn any photo into a case file — with honest confidence levels." />
+<meta property="og:image" content="assets/hero.webp" />
+<meta name="twitter:card" content="summary_large_image" />
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+<title>Photo Investigator — upload any photo, find where it was taken</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,650;0,6..72,800;1,6..72,500&family=Public+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#f7ecd7; --bg2:#efe0c3;
+    --paper:#fffaf0; --paper2:#fdf3dd; --paper3:#f9ebcb;
+    --ink:#2b2015; --ink2:#57452e; --muted:#857252;
+    --line:#dfc99c; --line2:#cdb280;
+    --amber:#b45309; --amber2:#d97706; --amber-soft:#fde9bd; --amber-ink:#7c2d12;
+    --stamp:#b91c1c; --ok:#4d7c0f; --okbg:#eef5d8;
+    --chip:#fff3d6; --shadow:0 18px 40px rgba(90,58,10,.16);
+    --radius:18px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#171009; --bg2:#1f150a;
+      --paper:#251a0f; --paper2:#2c2013; --paper3:#332613;
+      --ink:#f6ead2; --ink2:#ddc9a4; --muted:#b3a07c;
+      --line:#4a3a20; --line2:#5f4a28;
+      --amber:#f59e0b; --amber2:#fbbf24; --amber-soft:#3d2c10; --amber-ink:#fcd34d;
+      --stamp:#f87171; --ok:#a3e635; --okbg:#263311;
+      --chip:#382a14; --shadow:0 18px 40px rgba(0,0,0,.45);
+    }
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; color:var(--ink);
+    font-family:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+    background:
+      radial-gradient(900px 480px at 85% -80px, rgba(217,119,6,.20), transparent 60%),
+      radial-gradient(700px 420px at -120px 30%, rgba(180,83,9,.12), transparent 55%),
+      linear-gradient(var(--bg), var(--bg2));
+    min-height:100vh;
+  }
+  /* faint map grid */
+  body::before{
+    content:""; position:fixed; inset:0; pointer-events:none; opacity:.35; z-index:0;
+    background:
+      linear-gradient(rgba(180,120,40,.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(180,120,40,.07) 1px, transparent 1px);
+    background-size:56px 56px;
+  }
+  .wrap{position:relative; z-index:1; max-width:1120px; margin:0 auto; padding:22px 18px 60px}
+  .mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
+  .serif{font-family:"Newsreader",Georgia,serif}
+
+  /* ---------- top strip ---------- */
+  .topstrip{
+    display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; justify-content:space-between;
+    font-family:"IBM Plex Mono",monospace; font-size:11.5px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--ink2); border-bottom:1.5px dashed var(--line2); padding-bottom:12px;
+  }
+  .topstrip .dot{color:var(--amber2)}
+  .stamp-badge{
+    border:2px solid var(--stamp); color:var(--stamp); border-radius:6px; padding:3px 9px;
+    transform:rotate(-2deg); font-weight:600; letter-spacing:.18em;
+  }
+
+  /* ---------- hero ---------- */
+  .hero{display:grid; grid-template-columns:1.05fr .95fr; gap:28px; align-items:center; margin:30px 0 8px}
+  .hero h1{
+    font-family:"Newsreader",serif; font-weight:800; line-height:.98; letter-spacing:-.01em;
+    font-size:clamp(40px,6.4vw,68px); margin:0 0 14px;
+  }
+  .hero h1 em{font-style:italic; color:var(--amber)}
+  .hero p.lede{font-size:17.5px; line-height:1.55; color:var(--ink2); margin:0 0 18px; max-width:34em}
+  .hero .howline{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px}
+  .step-pill{
+    display:inline-flex; align-items:center; gap:8px; background:var(--paper); border:1.5px solid var(--line);
+    border-radius:999px; padding:7px 13px 7px 8px; font-size:13px; font-weight:600; color:var(--ink2);
+  }
+  .step-pill b{
+    background:var(--amber); color:#fff7e8; width:22px; height:22px; border-radius:50%;
+    display:inline-flex; align-items:center; justify-content:center; font-size:12px; font-family:"IBM Plex Mono",monospace;
+  }
+  .hero-img{
+    border-radius:22px; overflow:hidden; border:1.5px solid var(--line2); box-shadow:var(--shadow);
+    transform:rotate(1.2deg); background:var(--paper);
+  }
+  .hero-img img{display:block; width:100%; height:auto}
+  .hero-img figcaption{
+    font-family:"IBM Plex Mono",monospace; font-size:11.5px; letter-spacing:.08em; color:var(--muted);
+    padding:10px 14px; text-transform:uppercase;
+  }
+  .featured{
+    margin-top:16px; background:var(--paper2); border:1.5px solid var(--line); border-left:6px solid var(--amber);
+    border-radius:12px; padding:13px 16px; font-size:14.5px; line-height:1.55; color:var(--ink2);
+  }
+  .featured strong{color:var(--ink)}
+
+  /* ---------- upload ---------- */
+  .upload-zone{
+    margin-top:30px; background:var(--paper); border:2px dashed var(--line2); border-radius:var(--radius);
+    padding:34px 22px; text-align:center; cursor:pointer; transition:border-color .15s, background .15s; position:relative;
+  }
+  .upload-zone:hover, .upload-zone.drag{border-color:var(--amber); background:var(--paper2)}
+  .upload-zone .big{font-family:"Newsreader",serif; font-size:clamp(24px,3.6vw,32px); font-weight:650; margin:6px 0 6px}
+  .upload-zone .sub{color:var(--muted); font-size:14.5px; line-height:1.55; max-width:52ch; margin:0 auto}
+  .upload-cta{
+    display:inline-block; margin-top:16px; background:var(--amber); color:#fff8ea; font-weight:700; font-size:15px;
+    padding:12px 26px; border-radius:999px; border:none; cursor:pointer; box-shadow:0 8px 20px rgba(180,83,9,.3);
+  }
+  .upload-cta:hover{background:var(--amber2)}
+  .plane-glyph{font-size:30px; display:block}
+  .privacy-note{margin-top:12px; font-size:12.5px; color:var(--muted); font-family:"IBM Plex Mono",monospace; letter-spacing:.03em}
+
+  /* ---------- sections / panels ---------- */
+  .hidden{display:none !important}
+  section.panel{
+    margin-top:26px; background:var(--paper); border:1.5px solid var(--line); border-radius:var(--radius);
+    box-shadow:0 6px 22px rgba(90,58,10,.07); overflow:hidden;
+  }
+  .panel-head{
+    display:flex; flex-wrap:wrap; gap:8px; align-items:baseline; justify-content:space-between;
+    padding:16px 20px 12px; border-bottom:1.5px dashed var(--line);
+  }
+  .panel-head h2{font-family:"Newsreader",serif; font-size:24px; font-weight:700; margin:0}
+  .panel-head .tag{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--amber)}
+  .panel-body{padding:18px 20px 20px}
+  .panel-body p{line-height:1.6; color:var(--ink2); margin:0 0 12px}
+  .panel-body p:last-child{margin-bottom:0}
+
+  .evidence-grid{display:grid; grid-template-columns:.92fr 1.08fr; gap:22px}
+  .photo-frame{
+    background:var(--paper3); border:1.5px solid var(--line); border-radius:12px; padding:10px; position:relative;
+  }
+  .photo-frame::before{
+    content:""; position:absolute; top:-12px; left:50%; transform:translateX(-50%) rotate(-3deg);
+    width:110px; height:24px; background:rgba(253,233,189,.85); border:1px solid rgba(180,130,50,.35); z-index:2;
+  }
+  .photo-scroll{overflow:auto; max-height:440px; border-radius:7px; background:#00000010; cursor:zoom-in}
+  .photo-scroll.zoomed{cursor:zoom-out}
+  .photo-scroll img{display:block; width:100%; height:auto; border-radius:7px}
+  .zoom-bar{display:flex; align-items:center; gap:10px; margin-top:9px; font-size:12.5px; color:var(--muted); font-family:"IBM Plex Mono",monospace}
+  .zoom-bar input[type="range"]{flex:1; accent-color:var(--amber)}
+  .zoom-bar button{background:var(--paper2); border:1.5px solid var(--line2); color:var(--ink); border-radius:8px; width:30px; height:30px; cursor:pointer; font-size:15px; font-weight:700; line-height:1}
+  .zoom-bar button:hover{border-color:var(--amber)}
+  .zoom-hint{font-size:12.5px; color:var(--muted); margin:8px 0 0; line-height:1.5}
+  .photo-meta{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--muted); margin-top:9px; word-break:break-all; line-height:1.6}
+
+  /* hand-entered details */
+  .manual-box{margin-top:14px; border:1.5px dashed var(--line2); border-radius:12px; padding:14px 16px; background:var(--paper2)}
+  .manual-box h3{margin:0 0 4px; font-size:15.5px}
+  .manual-box p{font-size:13.5px; margin:0 0 6px}
+  .manual-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:6px}
+  @media (max-width:600px){ .manual-grid{grid-template-columns:1fr} }
+
+  /* reflection clues group */
+  .refl-group{margin-top:14px; border:1.5px solid var(--line2); border-radius:12px; padding:13px 16px; background:var(--paper3)}
+  .refl-group .refl-head{font-weight:800; font-size:14.5px; margin-bottom:8px}
+  .refl-note{font-size:12.5px; color:var(--muted); margin-top:8px; line-height:1.55}
+
+  dl.facts{margin:0; display:grid; grid-template-columns:repeat(2,1fr); gap:0}
+  dl.facts > div{padding:11px 12px; border-bottom:1px dashed var(--line)}
+  dl.facts dt{font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--muted); margin-bottom:4px}
+  dl.facts dd{margin:0; font-size:15px; font-weight:600; line-height:1.45; word-break:break-word}
+  dl.facts dd small{display:block; font-weight:400; color:var(--ink2); font-size:13px; margin-top:2px}
+  .missing-note{
+    background:var(--amber-soft); border:1.5px solid var(--line2); border-radius:10px; padding:12px 14px;
+    font-size:14px; line-height:1.55; color:var(--amber-ink); margin-top:14px;
+  }
+  .missing-note strong{font-weight:700}
+  .map-frame{margin-top:14px; border:1.5px solid var(--line2); border-radius:12px; overflow:hidden}
+  .map-frame iframe{display:block; width:100%; height:260px; border:0}
+  .map-link{display:inline-block; margin-top:9px; font-weight:700; color:var(--amber); text-decoration:none; font-size:14px}
+  .map-link:hover{text-decoration:underline}
+
+  /* sun compass */
+  .sun-grid{display:grid; grid-template-columns:170px 1fr; gap:20px; align-items:center}
+  .compass{
+    width:160px; height:160px; margin:0 auto; border-radius:50%; border:2px solid var(--line2);
+    background:radial-gradient(circle, var(--paper2) 55%, var(--paper3)); position:relative; flex:none;
+  }
+  .compass .n{position:absolute; top:6px; left:50%; transform:translateX(-50%); font-family:"IBM Plex Mono",monospace; font-size:11px; font-weight:600; color:var(--muted)}
+  .compass .s{position:absolute; bottom:6px; left:50%; transform:translateX(-50%); font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--muted)}
+  .compass .e{position:absolute; right:8px; top:50%; transform:translateY(-50%); font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--muted)}
+  .compass .w{position:absolute; left:8px; top:50%; transform:translateY(-50%); font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--muted)}
+  .sun-arrow{
+    position:absolute; left:50%; top:50%; width:3px; height:62px; background:var(--amber2); border-radius:3px;
+    transform-origin:50% 100%; margin-left:-1.5px; margin-top:-62px;
+  }
+  .sun-arrow::after{content:"☀"; position:absolute; top:-24px; left:50%; transform:translateX(-50%); font-size:19px}
+  .sun-dot{position:absolute; left:50%; top:50%; width:11px; height:11px; border-radius:50%; background:var(--amber); transform:translate(-50%,-50%)}
+
+  /* chips */
+  .chips{display:flex; flex-wrap:wrap; gap:8px; margin:6px 0 4px}
+  .chip{
+    background:var(--chip); border:1.5px solid var(--line2); border-radius:999px; padding:7px 13px;
+    font-size:13.5px; line-height:1.4; color:var(--ink);
+  }
+  .chip b{font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--amber); display:block; margin-bottom:1px}
+
+  /* buttons & inputs */
+  .btn{
+    display:inline-flex; align-items:center; gap:8px; background:var(--amber); color:#fff8ea; border:none; cursor:pointer;
+    font:inherit; font-weight:700; font-size:15px; padding:12px 22px; border-radius:999px; text-decoration:none;
+    box-shadow:0 8px 18px rgba(180,83,9,.25);
+  }
+  .btn:hover{background:var(--amber2)}
+  .btn:disabled{opacity:.55; cursor:wait}
+  .btn.ghost{background:transparent; color:var(--amber); border:1.5px solid var(--amber); box-shadow:none}
+  .btn.ghost:hover{background:var(--amber-soft)}
+  .btn.small{padding:9px 16px; font-size:13.5px}
+  .btnrow{display:flex; flex-wrap:wrap; gap:10px; margin-top:14px}
+  input[type="password"], input[type="text"], input[type="datetime-local"]{
+    font:inherit; padding:11px 14px; border-radius:10px; border:1.5px solid var(--line2);
+    background:var(--paper2); color:var(--ink); width:100%;
+  }
+  input:focus{outline:2px solid var(--amber2); outline-offset:1px}
+  label.flabel{display:block; font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.13em; text-transform:uppercase; color:var(--muted); margin:14px 0 6px}
+  .key-status{font-size:13.5px; margin-top:8px; color:var(--ink2)}
+  .key-status .ok{color:var(--ok); font-weight:700}
+  .server-banner{background:var(--okbg); border:1.5px solid var(--ok); color:var(--ink); border-radius:12px; padding:12px 14px; font-size:14px; line-height:1.55; margin-bottom:14px}
+  .server-banner strong{color:var(--ok)}
+  details.settings{border:1.5px dashed var(--line2); border-radius:12px; padding:12px 16px; margin-bottom:16px; background:var(--paper2)}
+  details.settings summary{cursor:pointer; font-weight:700; font-size:14.5px}
+  .spinner{
+    width:17px; height:17px; border-radius:50%; border:2.5px solid rgba(255,248,234,.35); border-top-color:#fff8ea;
+    animation:spin .7s linear infinite; display:inline-block;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .error-box{
+    background:#fde8e8; border:1.5px solid #f0b4b4; color:#7f1d1d; border-radius:10px; padding:12px 14px;
+    font-size:14px; line-height:1.55; margin-top:12px; white-space:pre-wrap; word-break:break-word;
+  }
+  @media (prefers-color-scheme: dark){ .error-box{background:#3d1414; border-color:#7f2d2d; color:#fecaca} }
+  .ai-verdict{
+    font-family:"Newsreader",serif; font-size:clamp(21px,3vw,27px); font-weight:700; line-height:1.3; margin:4px 0 8px;
+  }
+  .conf{
+    display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.12em; text-transform:uppercase;
+    padding:4px 10px; border-radius:999px; border:1.5px solid var(--line2); background:var(--paper2); color:var(--ink2); vertical-align:middle;
+  }
+  .conf.high{border-color:var(--ok); color:var(--ok); background:var(--okbg)}
+
+  /* flight panel */
+  .flight-links{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:6px}
+  .flight-links a{
+    display:block; border:1.5px solid var(--line2); border-radius:12px; padding:14px 16px; text-decoration:none;
+    background:var(--paper2); color:var(--ink);
+  }
+  .flight-links a:hover{border-color:var(--amber)}
+  .flight-links a b{display:block; font-size:15.5px; margin-bottom:3px}
+  .flight-links a span{font-size:13px; color:var(--ink2); line-height:1.45; display:block}
+  ol.method{margin:0; padding-left:20px; line-height:1.65; color:var(--ink2); font-size:14.5px}
+  ol.method li{margin-bottom:5px}
+  ol.method strong{color:var(--ink)}
+
+  /* case file — boarding pass */
+  .casefile{
+    margin-top:30px; background:var(--paper); border:2px solid var(--ink2); border-radius:20px; overflow:hidden;
+    box-shadow:var(--shadow); position:relative;
+  }
+  .casefile-top{
+    background:var(--ink); color:var(--bg); padding:15px 22px; display:flex; flex-wrap:wrap; gap:6px 16px;
+    align-items:center; justify-content:space-between;
+    font-family:"IBM Plex Mono",monospace; font-size:11.5px; letter-spacing:.16em; text-transform:uppercase;
+  }
+  @media (prefers-color-scheme: dark){ .casefile-top{background:#0e0903; color:#f6ead2} }
+  .casefile-loc{padding:22px 22px 6px}
+  .casefile-loc .k{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.15em; text-transform:uppercase; color:var(--muted)}
+  .casefile-loc .place{font-family:"Newsreader",serif; font-size:clamp(28px,4.6vw,42px); font-weight:800; line-height:1.08; margin:5px 0 8px}
+  .perf{border-top:2px dashed var(--line2); margin:16px 0 0; position:relative}
+  .perf::before,.perf::after{
+    content:""; position:absolute; top:-11px; width:22px; height:22px; border-radius:50%; background:var(--bg);
+    border:2px solid var(--ink2);
+  }
+  .perf::before{left:-13px} .perf::after{right:-13px}
+  .case-cols{display:grid; grid-template-columns:repeat(3,1fr); gap:0; padding:6px 10px 8px}
+  .case-cols > div{padding:12px 12px 8px}
+  .case-cols > div + div{border-left:1.5px dashed var(--line)}
+  .case-cols h3{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.15em; text-transform:uppercase; margin:0 0 9px; color:var(--amber)}
+  .case-cols ul{margin:0; padding-left:17px; font-size:14px; line-height:1.6; color:var(--ink2)}
+  .case-cols li{margin-bottom:5px}
+  .case-cols .none{color:var(--muted); font-style:italic; list-style:none; margin-left:-17px}
+  .barcode{
+    height:44px; margin:10px 22px 4px;
+    background:repeating-linear-gradient(90deg, var(--ink) 0 2px, transparent 2px 5px, var(--ink) 5px 6px, transparent 6px 11px, var(--ink) 11px 14px, transparent 14px 17px);
+    opacity:.8; border-radius:2px;
+  }
+  .casefile-foot{
+    display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; padding:12px 22px 18px;
+    font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--muted); letter-spacing:.06em;
+  }
+
+  .export-row{display:inline-flex; flex-wrap:wrap; gap:10px; align-items:center}
+  .thumb-opt{display:inline-flex; gap:6px; align-items:center; font-size:12px; color:var(--ink2); cursor:pointer; text-transform:none; letter-spacing:0}
+  .thumb-opt input{accent-color:var(--amber)}
+  .reset-row{margin-top:18px; text-align:center}
+  .reset-row button{background:none; border:none; color:var(--muted); font:inherit; font-size:13.5px; cursor:pointer; text-decoration:underline}
+
+  footer{margin-top:44px; border-top:1.5px dashed var(--line2); padding-top:18px; color:var(--muted); font-size:13.5px; line-height:1.65}
+  footer a{color:var(--amber)}
+
+  @media (max-width:820px){
+    .hero{grid-template-columns:1fr}
+    .hero-img{transform:none; max-width:520px}
+    .evidence-grid{grid-template-columns:1fr}
+    .case-cols{grid-template-columns:1fr}
+    .case-cols > div + div{border-left:none; border-top:1.5px dashed var(--line)}
+    .flight-links{grid-template-columns:1fr}
+    .sun-grid{grid-template-columns:1fr}
+    dl.facts{grid-template-columns:1fr}
+  }
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto}
+    .spinner{animation:none}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topstrip">
+    <span>Photo Investigator <span class="dot">●</span> Photo Investigation Unit</span>
+    <span class="stamp-badge">Case Open</span>
+    <span class="mono" id="caseNo">File № PFF-0000</span>
+  </div>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div>
+      <h1>Upload a photo.<br /><em>Boom</em> — where was it taken?</h1>
+      <p class="lede">Drop in <strong>any photo</strong> — a street scene, a selfie, a receipt, a meal, a window seat, a screenshot — and this investigator first works out what <em>kind</em> of photo it is, then digs through its hidden metadata, the sun's position, and everything actually visible in the frame to work out where and when it was taken.</p>
+      <div class="howline">
+        <span class="step-pill"><b>1</b> Upload the photo</span>
+        <span class="step-pill"><b>2</b> Metadata speaks</span>
+        <span class="step-pill"><b>3</b> AI types it, hunts clues</span>
+        <span class="step-pill"><b>4</b> Case file verdict</span>
+      </div>
+      <div class="featured">
+        <strong>Featured case — the one from the reel:</strong> a creator pinned down the exact flight <em>and seat</em> from a single airplane-window photo, matching mountains, clouds, sun angle and the timestamp against flight-playback data. That method lives here too — as one of ten photo-type playbooks. If your photo turns out to be a flight or airport shot, the dedicated flight-narrowing module opens up in the case below.
+      </div>
+    </div>
+    <figure class="hero-img" style="margin:0">
+      <img src="assets/hero.webp" alt="Illustration of a detective's evidence corkboard with pinned photos of a street, a selfie, a meal, a mountain, a car and a receipt, tied together with red string, a magnifying glass and a folded map" />
+      <figcaption>Exhibit A — any photo is fair game</figcaption>
+    </figure>
+  </div>
+
+  <!-- UPLOAD -->
+  <div class="upload-zone" id="dropZone" role="button" tabindex="0" aria-label="Upload a photo to investigate">
+    <span class="plane-glyph" aria-hidden="true">📸</span>
+    <div class="big">Drop your photo here</div>
+    <p class="sub">…or tap to pick one from your gallery. Original camera photos work best — screenshots and social-media downloads usually have their location data stripped out (the site will tell you honestly if that happened).</p>
+    <button class="upload-cta" id="pickBtn" type="button">Choose a photo</button>
+    <div class="privacy-note" id="privacyNote">🔒 YOUR PHOTO NEVER LEAVES THIS BROWSER — EXCEPT TO GOOGLE'S AI, ONLY IF YOU ADD YOUR OWN KEY AND PRESS ANALYSE</div>
+    <input type="file" id="fileInput" accept="image/*" class="hidden" />
+  </div>
+
+  <!-- AI KEY SETTINGS (always visible, before upload too) -->
+  <section class="panel" id="keyPanel">
+    <div class="panel-head">
+      <h2>⚙️ AI settings — your Gemini key</h2>
+      <span class="tag">Set up once · Free</span>
+    </div>
+    <div class="panel-body">
+      <div class="server-banner hidden" id="serverBanner"><strong>✓ Ready to analyse — no key needed.</strong> This site runs the AI investigation on its own server. Your photo is processed in memory and never stored. You can still use your own key below if you prefer.</div>
+      <details class="settings" id="keySettings" style="margin-bottom:0">
+        <summary>Your own Gemini API key — tap to add or change it</summary>
+        <p style="margin-top:12px">The visual investigation (Step 3) runs on Google's Gemini AI with <strong>your own free key</strong>, so there is no middleman: your photo goes from this browser straight to Google, only when you press Analyse. The metadata investigation (Step 2) needs no key at all.</p>
+        <p><strong>No key yet?</strong> Get one free in about a minute: open <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio → API keys</a>, sign in, tap <em>Create API key</em>, and paste it here.</p>
+        <label class="flabel" for="apiKeyInput">Gemini API key</label>
+        <input type="password" id="apiKeyInput" placeholder="AIza…" autocomplete="off" spellcheck="false" />
+        <div class="btnrow">
+          <button class="btn small" id="saveKeyBtn" type="button">Save key in this browser</button>
+          <button class="btn ghost small" id="clearKeyBtn" type="button">Remove key</button>
+        </div>
+        <div class="key-status" id="keyStatus"></div>
+        <label class="flabel" for="modelInput">Gemini model <span style="text-transform:none; letter-spacing:0">(advanced)</span></label>
+        <input type="text" id="modelInput" spellcheck="false" autocomplete="off" />
+        <div class="key-status">Leave as-is unless Google retires it. If analysis says the model isn't recognised, paste a current model name from Google AI Studio.</div>
+      </details>
+    </div>
+  </section>
+
+  <!-- EVIDENCE + EXIF -->
+  <section class="panel hidden" id="evidencePanel">
+    <div class="panel-head">
+      <h2>Exhibit &amp; hidden metadata</h2>
+      <span class="tag">Step 2 · EXIF</span>
+    </div>
+    <div class="panel-body">
+      <div class="evidence-grid">
+        <div>
+          <div class="photo-frame">
+            <div class="photo-scroll" id="photoScroll"><img id="previewImg" alt="Your uploaded photo, shown as evidence" /></div>
+            <div class="zoom-bar">
+              <button type="button" id="zoomOut" aria-label="Zoom out">−</button>
+              <input type="range" id="zoomRange" min="100" max="350" step="10" value="100" aria-label="Zoom level" />
+              <button type="button" id="zoomIn" aria-label="Zoom in">+</button>
+              <span id="zoomLabel">100%</span>
+            </div>
+            <p class="zoom-hint">Tap the photo or drag the slider to magnify — handy for inspecting small reflections.</p>
+          </div>
+          <div class="photo-meta" id="photoMeta"></div>
+        </div>
+        <div>
+          <dl class="facts" id="factsList"></dl>
+          <div id="gpsExtra"></div>
+          <div id="noMetaBanner"></div>
+          <div class="manual-box hidden" id="manualBox">
+            <h3>🖊 No metadata? Tell us by hand</h3>
+            <p>Downloaded photos often arrive with their metadata stripped — the AI visual investigation and reflection clues in Step 3 don't need any of it. But if you remember <strong>when</strong> and <strong>roughly where</strong> the photo was taken, type it in and the sun-position clue will still work (marked as approximate).</p>
+            <div class="manual-grid">
+              <div>
+                <label class="flabel" for="manualTime">Approximate date &amp; time</label>
+                <input type="datetime-local" id="manualTime" />
+              </div>
+              <div>
+                <label class="flabel" for="manualArea">Rough area</label>
+                <input type="text" id="manualArea" placeholder="e.g. Prague, Czechia" />
+              </div>
+            </div>
+            <div class="btnrow">
+              <button class="btn small" id="manualApply" type="button">Apply for sun calculation</button>
+            </div>
+            <div class="key-status" id="manualStatus"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SUN -->
+  <section class="panel hidden" id="sunPanel">
+    <div class="panel-head">
+      <h2>The sun as a witness</h2>
+      <span class="tag">Step 2 · Sun position</span>
+    </div>
+    <div class="panel-body" id="sunBody"></div>
+  </section>
+
+  <!-- AI -->
+  <section class="panel hidden" id="aiPanel">
+    <div class="panel-head">
+      <h2>AI reads the picture</h2>
+      <span class="tag">Step 3 · Gemini vision</span>
+    </div>
+    <div class="panel-body">
+      <div id="aiIdle">
+        <p>The AI detective works in two passes. First it <strong>classifies your photo</strong> into one of ten types — street, selfie, flight, airport, indoor, food, nature, screenshot, vehicle or document. Then it <strong>hunts that type's signature clues</strong>: number plates and road markings for streets, the background and sunglasses reflections for selfies, plug sockets and TV logos indoors, menu language and currency for food, UI text for screenshots, direct text for receipts. A second pass reads every <strong>reflective surface</strong> — mirrors, glass, water — remembering reflections are mirrored and often show what was <em>behind</em> the camera. It then leads with its best guess for the location. None of this needs metadata: it works fully on downloaded photos too.</p>
+        <label class="flabel" for="userNotes">Anything you know? <span style="text-transform:none; letter-spacing:0">(optional — the AI cross-checks it and flags contradictions)</span></label>
+        <input type="text" id="userNotes" maxlength="500" placeholder="e.g. holiday in Kerala, Dec 2025 · taken from a train · my friend's photo from Prague" />
+        <div class="btnrow">
+          <button class="btn" id="analyseBtn" type="button">🔍 Analyse photo with AI</button>
+        </div>
+        <p class="hidden" id="noKeyNote" style="margin-top:12px">Add your free Gemini key above first (⚙️ AI settings) — analysis is disabled until then.</p>
+      </div>
+
+      <div id="aiResults" class="hidden"></div>
+      <div id="aiError" class="hidden"></div>
+    </div>
+  </section>
+
+  <!-- ANALYSE WITH Muse -->
+  <section class="panel" id="musePanel">
+    <div class="panel-head">
+      <h2>🤖 Prefer Muse's eyes?</h2>
+      <span class="tag">Manual handoff · Copy &amp; paste</span>
+    </div>
+    <div class="panel-body">
+      <p><strong>Muse — the assistant behind this page</strong> — can run the whole investigation on the same photo: visual clues, reflection clues, anything you tell it about the file, plus the flight cross-check for flight photos. This is a manual handoff, not an automatic upload: tap the button to copy a ready-made investigation prompt, open the Muse app or site, attach the same photo, and paste the prompt in.</p>
+      <div class="btnrow">
+        <button class="btn" id="copyMuseBtn" type="button">📋 Copy investigation prompt for Muse</button>
+      </div>
+      <div class="key-status" id="copyStatus"></div>
+    </div>
+  </section>
+
+  <!-- FLIGHT MODULE -->
+  <section class="panel hidden" id="flightPanel">
+    <div class="panel-head">
+      <h2>✈️ Flight narrowing — the reel method</h2>
+      <span class="tag">Special module · Flight &amp; airport photos</span>
+    </div>
+    <div class="panel-body">
+      <p id="flightIntro">This photo looks like it was taken from a plane, so the flight cross-check opens up. This is exactly how the reel's creator finished the job:</p>
+      <ol class="method">
+        <li><strong>Fix the window:</strong> <span id="flightWindow">use the photo's date and time</span> — search playback for roughly ±30 minutes around it.</li>
+        <li><strong>Fix the place:</strong> <span id="flightPlace">use the GPS point, or the terrain the AI spotted (mountain range, coastline, river bends).</span></li>
+        <li><strong>Match the ground:</strong> open the playback map at that time and slide along candidate routes until the terrain, cloud shadows and sun angle line up with your photo.</li>
+        <li><strong>Seat side:</strong> <span id="flightSeat">if the AI spotted the wing or window side, you can narrow it to the left or right side of the cabin.</span></li>
+      </ol>
+      <div class="flight-links">
+        <a id="fr24Link" href="https://www.flightradar24.com/" target="_blank" rel="noopener">
+          <b>Flightradar24 — playback map ↗</b>
+          <span>Replay live traffic around your photo's time and place, like in the reel.</span>
+        </a>
+        <a id="faLink" href="https://www.flightaware.com/live/" target="_blank" rel="noopener">
+          <b>FlightAware — flight history ↗</b>
+          <span>Cross-check routes, departure/arrival times and aircraft on the same window.</span>
+        </a>
+      </div>
+      <p style="margin-top:14px; font-size:13.5px">Honest note: an exact flight number and seat only count as <em>found</em> when the playback terrain actually matches your photo frame by frame. Until then it stays a strong lead, not a verdict.</p>
+    </div>
+  </section>
+  <div class="hidden" id="flightToggleWrap" style="margin-top:14px; text-align:center">
+    <button class="btn ghost small" id="flightToggleBtn" type="button">✈️ This is a flight photo — open the flight module anyway</button>
+  </div>
+
+  <!-- CASE FILE -->
+  <div class="casefile hidden" id="caseFile">
+    <div class="casefile-top">
+      <span>🔍 Photo Investigator — Case File</span>
+      <span id="caseFileNo">№ PFF-0000</span>
+      <span id="caseDate"></span>
+    </div>
+    <div class="casefile-loc">
+      <div class="k">Most likely location</div>
+      <div class="place" id="casePlace">Still investigating…</div>
+      <span class="conf" id="caseConf">Confidence: gathering evidence</span>
+      <span class="conf" id="caseType">📸 Type: —</span>
+    </div>
+    <div class="perf"></div>
+    <div class="case-cols">
+      <div>
+        <h3>✓ Known — from metadata</h3>
+        <ul id="caseKnown"></ul>
+      </div>
+      <div>
+        <h3>◐ Suggested — visual clues</h3>
+        <ul id="caseLikely"></ul>
+      </div>
+      <div>
+        <h3>? Still unknown</h3>
+        <ul id="caseUnknown"></ul>
+      </div>
+    </div>
+    <div class="barcode" aria-hidden="true"></div>
+    <div class="casefile-foot">
+      <span id="caseFootMeta">SUBJECT: THE PHOTO · TYPE: TBD · GPS: —</span>
+      <span class="export-row">
+        <label class="thumb-opt"><input type="checkbox" id="cardPhoto" /> include photo</label>
+        <button class="btn small" id="cardBtn" type="button">🖼 Share card (.png)</button>
+        <button class="btn ghost small" id="downloadBtn" type="button">⬇ Case file (.txt)</button>
+      </span>
+    </div>
+  </div>
+
+  <div class="reset-row hidden" id="resetRow">
+    <button id="resetBtn" type="button">Start a new investigation with a different photo</button>
+  </div>
+
+  <footer>
+    <p><strong>For fun and learning.</strong> Analyse only your own photos, or photos you have permission to investigate. Location data can be sensitive — think twice before sharing a case file from someone else's picture.</p>
+    <p>How it works: metadata (EXIF) is read locally in your browser with <a href="https://github.com/MikeKovarik/exifr" target="_blank" rel="noopener">exifr</a>; sun position is calculated with <a href="https://github.com/mourner/suncalc" target="_blank" rel="noopener">SunCalc</a>; maps by <a href="https://www.openstreetmap.org/" target="_blank" rel="noopener">OpenStreetMap</a>; visual clues by Google Gemini — with your own API key, or the site's server if it runs one (photos processed in memory, never stored). Nothing is uploaded anywhere else, and no exact location, flight or seat is ever claimed unless the evidence actually supports it.</p>
+  </footer>
+</div>
+
+<!-- Bundled locally (see js/vendor/LICENSES.txt): no third-party CDN needed, works offline-ish and on locked-down networks. -->
+<script src="js/vendor/exifr-7.1.3.full.umd.js"></script>
+<script src="js/vendor/suncalc-1.9.0.js"></script>
+<script src="js/investigator-core.js"></script>
+<script>
+(function(){
+  "use strict";
+  var $ = function(id){ return document.getElementById(id); };
+  var Core = window.InvestigatorCore;
+  var TYPES = Core.TYPES;
+
+  var state = {
+    file: null, fileName: "", dataUrlFull: null,
+    exif: null, lat: null, lon: null, takenAt: null,
+    device: "", sun: null, ai: null, isFlight: false,
+    photoType: null, typeInfo: null, flightTouched: false
+  };
+  var caseNo = "PFF-" + Math.floor(1000 + Math.random()*9000);
+  $("caseNo").textContent = "File № " + caseNo;
+  $("caseFileNo").textContent = "№ " + caseNo;
+
+  /* ---------- helpers ---------- */
+  function esc(s){
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+  function fmtDate(d){
+    try{
+      return d.toLocaleString("en-IN", {weekday:"short", day:"numeric", month:"short", year:"numeric", hour:"numeric", minute:"2-digit", hour12:true});
+    }catch(e){ return d.toString(); }
+  }
+  function compass(deg){
+    var dirs = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+    return dirs[Math.round(((deg%360)+360)%360 / 22.5) % 16];
+  }
+  function fact(label, valueHtml){
+    return "<div><dt>" + esc(label) + "</dt><dd>" + valueHtml + "</dd></div>";
+  }
+  function liList(items, emptyText){
+    if(!items.length) return '<li class="none">' + esc(emptyText) + "</li>";
+    return items.map(function(t){ return "<li>" + esc(t) + "</li>"; }).join("");
+  }
+
+  /* ---------- upload ---------- */
+  var dropZone = $("dropZone"), fileInput = $("fileInput");
+  dropZone.addEventListener("click", function(e){ if(e.target !== fileInput) fileInput.click(); });
+  dropZone.addEventListener("keydown", function(e){ if(e.key === "Enter" || e.key === " "){ e.preventDefault(); fileInput.click(); } });
+  ["dragenter","dragover"].forEach(function(ev){ dropZone.addEventListener(ev, function(e){ e.preventDefault(); dropZone.classList.add("drag"); }); });
+  ["dragleave","drop"].forEach(function(ev){ dropZone.addEventListener(ev, function(e){ e.preventDefault(); dropZone.classList.remove("drag"); }); });
+  dropZone.addEventListener("drop", function(e){
+    var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if(f) handleFile(f);
+  });
+  fileInput.addEventListener("change", function(){ if(fileInput.files[0]) handleFile(fileInput.files[0]); });
+
+  function handleFile(file){
+    if(!/^image\//.test(file.type) && !/\.(jpe?g|png|webp|heic|heif|tiff?)$/i.test(file.name)){
+      showUploadError("That doesn't look like an image file. Try a JPG, PNG or WEBP photo.");
+      return;
+    }
+    state = { file:file, fileName:file.name, dataUrlFull:null, exif:null, lat:null, lon:null,
+              takenAt:null, device:"", sun:null, ai:null, isFlight:false, photoType:null, typeInfo:null, flightTouched: state.flightTouched,
+              manualTime:null, manualLat:null, manualLon:null, manualAreaName:"" };
+    var url = URL.createObjectURL(file);
+    $("previewImg").src = url;
+    setZoom(100);
+    $("noMetaBanner").innerHTML = "";
+    $("manualBox").classList.add("hidden");
+    $("manualTime").value = ""; $("manualArea").value = ""; $("manualStatus").innerHTML = "";
+    $("photoMeta").textContent = file.name + "  ·  " + (file.size/1024).toFixed(0) + " KB  ·  " + (file.type || "image");
+    ["evidencePanel","sunPanel","aiPanel","caseFile","resetRow"].forEach(function(id){ $(id).classList.remove("hidden"); });
+    $("aiResults").classList.add("hidden"); $("aiResults").innerHTML = "";
+    $("aiError").classList.add("hidden"); $("aiError").innerHTML = "";
+    $("aiIdle").classList.remove("hidden");
+    hideFlightModule();
+    readDimensions(url);
+    readExif(file);
+    updateKeyUI();
+    updateCaseFile();
+    $("evidencePanel").scrollIntoView({behavior:"smooth", block:"start"});
+  }
+  function showUploadError(msg){
+    var z = $("dropZone");
+    var old = z.querySelector(".error-box"); if(old) old.remove();
+    var d = document.createElement("div"); d.className = "error-box"; d.textContent = msg;
+    z.appendChild(d);
+  }
+  function readDimensions(url){
+    var img = new Image();
+    img.onload = function(){
+      var el = $("photoMeta");
+      el.textContent += "  ·  " + img.naturalWidth + " × " + img.naturalHeight + " px";
+      state.dimensions = img.naturalWidth + " × " + img.naturalHeight + " px";
+      updateCaseFile();
+    };
+    img.src = url;
+  }
+
+  /* ---------- EXIF ---------- */
+  function detectScreenshot(file, data){
+    var d = data || {};
+    var uc = d.UserComment;
+    if(uc && typeof uc !== "string"){ try{ uc = new TextDecoder().decode(uc instanceof Uint8Array ? uc : new Uint8Array(uc)); }catch(e){ uc = ""; } }
+    if(uc && /screenshot/i.test(uc)) return "The file's UserComment says \u201cScreenshot\u201d.";
+    var sw = String(d.Software || "") + " " + String(d.ImageDescription || "");
+    if(/screenshot|screen ?capture|snipping/i.test(sw)) return "The file says it was made by screenshot software (" + sw.trim() + ").";
+    if(/screen ?shot|screenshot|scr_\d|screen_\d|capture/i.test(file.name || "")) return "The file name looks like a screenshot (" + file.name + ").";
+    if(/png$/i.test(file.type || "") && !d.Make && !d.Model && !d.DateTimeOriginal) return "A PNG with no camera data — usually a screenshot or an export (suggestive, not certain).";
+    return "";
+  }
+
+  async function readExif(file){
+    var factsEl = $("factsList"), extraEl = $("gpsExtra");
+    factsEl.innerHTML = fact("Status", "Reading hidden metadata…");
+    extraEl.innerHTML = "";
+    var data = null;
+    try{
+      if(window.exifr){
+        data = await window.exifr.parse(file, {tiff:true, exif:true, gps:true, interop:false, ifd1:false, makerNote:false, userComment:true});
+      }
+    }catch(e){ data = null; }
+    state.exif = data || {};
+
+    var lat = null, lon = null;
+    if(data){
+      if(typeof data.latitude === "number" && typeof data.longitude === "number"){ lat = data.latitude; lon = data.longitude; }
+      var taken = data.DateTimeOriginal || data.CreateDate || data.ModifyDate || null;
+      if(taken && !(taken instanceof Date)){ var p = new Date(taken); if(!isNaN(p)) taken = p; else taken = null; }
+      state.takenAt = taken;
+      var make = data.Make || "", model = data.Model || "";
+      state.device = (make && model && model.indexOf(make) !== 0) ? (make + " " + model) : (model || make || "");
+    }
+    state.lat = lat; state.lon = lon;
+
+    /* Screenshot detection: a screenshot's timestamp is when the screen was captured, not when the photo was taken. */
+    state.screenshot = detectScreenshot(file, data);
+    state.screenshotTime = null;
+    if(state.screenshot && state.takenAt){ state.screenshotTime = state.takenAt; state.takenAt = null; }
+
+    var html = "";
+    if(state.screenshot){
+      html += fact("File type", "Screenshot<small>" + esc(state.screenshot) + "</small>");
+      if(state.screenshotTime) html += fact("Screenshot saved", esc(fmtDate(state.screenshotTime)) + "<small>When the screen was captured — <strong>not</strong> when the original photo was taken. Not used for the sun clue.</small>");
+    }
+    if(state.takenAt) html += fact("Date & time taken", esc(fmtDate(state.takenAt)) + "<small>Straight from the camera clock stored in the file.</small>");
+    else html += fact("Date & time taken", "Not in the file<small>No timestamp was stored — common for screenshots and edited exports.</small>");
+    if(state.device) html += fact("Camera / device", esc(state.device));
+    else html += fact("Camera / device", "Not recorded<small>The file doesn't say which device took it.</small>");
+    if(data && data.Software) html += fact("Last touched by", esc(String(data.Software)));
+    if(data && (data.ImageWidth || data.PixelXDimension)) html += fact("Stored size", esc(String(data.ImageWidth || data.PixelXDimension)) + " × " + esc(String(data.ImageHeight || data.PixelYDimension || "")) + " px");
+    if(lat !== null){
+      html += fact("GPS coordinates", lat.toFixed(6) + ", " + lon.toFixed(6) + "<small>The camera pinned exactly where it was standing.</small>");
+    } else {
+      html += fact("GPS coordinates", "Not present<small>See the note below — this is normal for downloaded photos.</small>");
+    }
+    factsEl.innerHTML = html;
+
+    /* no-metadata state + hand-entered fallback */
+    var coreEmpty = (lat === null) && !state.takenAt && !state.device && !state.screenshot;
+    $("noMetaBanner").innerHTML = coreEmpty
+      ? '<div class="missing-note"><strong>No metadata in this photo — visual-only investigation.</strong> The file stored no date, device or location (normal for downloaded or screenshotted photos). The AI visual analysis and reflection clues in Step 3 work fully without any metadata.</div>'
+      : (state.screenshot
+        ? '<div class="missing-note"><strong>This looks like a screenshot — the real photo time is unknown.</strong> ' + (state.screenshotTime ? "The file's date is when the screenshot was saved, not when the scene was photographed, so it is flagged rather than reported as fact. " : "") + 'The visual investigation in Step 3 reads in-image text, UI language and the scene itself instead.</div>'
+        : "");
+    var needsManual = (lat === null || !state.takenAt);
+    $("manualBox").classList.toggle("hidden", !needsManual);
+    if(needsManual && state.takenAt && !$("manualTime").value) $("manualTime").value = toLocalISO(state.takenAt);
+
+    if(lat !== null){
+      var d = 0.012;
+      var bbox = (lon-d) + "," + (lat-d) + "," + (lon+d) + "," + (lat+d);
+      var osm = "https://www.openstreetmap.org/?mlat=" + lat + "&mlon=" + lon + "#map=15/" + lat + "/" + lon;
+      extraEl.innerHTML =
+        '<div class="map-frame"><iframe title="Map of where this photo was taken" loading="lazy" src="https://www.openstreetmap.org/export/embed.html?bbox=' +
+        encodeURIComponent(bbox) + "&layer=mapnik&marker=" + lat + "," + lon + '"></iframe></div>' +
+        '<a class="map-link" href="' + osm + '" target="_blank" rel="noopener">Open this spot in OpenStreetMap ↗</a>';
+    } else {
+      extraEl.innerHTML =
+        '<div class="missing-note"><strong>No GPS in this photo.</strong> That\'s expected if it came from WhatsApp, Instagram or a screenshot — those apps strip location data before sharing. The clues aren\'t gone though: the AI visual investigation below can still read signs, terrain and landmarks in the picture itself.</div>';
+    }
+    renderSun();
+    updateCaseFile();
+  }
+
+  /* ---------- Sun (EXIF first, hand-entered fallback) ---------- */
+  function renderSun(){
+    var body = $("sunBody");
+    var lat = state.lat, lon = state.lon, time = state.takenAt, manual = false;
+    if(lat === null && state.manualLat != null){ lat = state.manualLat; lon = state.manualLon; manual = true; }
+    if(!time && state.manualTime){ time = state.manualTime; manual = true; }
+    if(lat === null || !time){
+      var miss = [];
+      if(lat === null) miss.push("where (GPS from the file, or a rough area typed by hand)");
+      if(!time) miss.push("when (date & time)");
+      body.innerHTML = "<p>The sun is a brilliant witness — <em>if</em> we know where and when. This panel is still missing <strong>" +
+        esc(miss.join(" and ")) + "</strong>. You can fill in an approximate date, time and area by hand in the evidence panel above (the “No metadata? Tell us by hand” box) — the sun clue works with those too, marked as approximate.</p>";
+      state.sun = null;
+      return;
+    }
+    if(!window.SunCalc){ body.innerHTML = "<p>Sun calculator failed to load — check your connection and reload.</p>"; return; }
+    var pos = window.SunCalc.getPosition(time, lat, lon);
+    var azDeg = (pos.azimuth * 180/Math.PI + 180) % 360;
+    var altDeg = pos.altitude * 180/Math.PI;
+    state.sun = { az: azDeg, alt: altDeg, manual: manual };
+    var dayPart, reading;
+    if(altDeg < -2){ dayPart = "Night / deep twilight"; reading = "The sun was below the horizon — this was shot at night or in deep twilight, whatever the camera clock's timezone says."; }
+    else if(altDeg < 6){ dayPart = "Golden hour"; reading = "The sun was hugging the horizon — long shadows, warm light. In the photo, shadows should stretch away from the " + compass(azDeg) + "."; }
+    else if(altDeg < 30){ dayPart = "Morning / afternoon"; reading = "The sun was fairly low in the " + compass(azDeg) + " — shadows fall noticeably toward the " + compass((azDeg+180)%360) + ", which helps orient the shot."; }
+    else { dayPart = "High sun"; reading = "The sun was high in the " + compass(azDeg) + " — short shadows. On a flight photo, this is the bright, flat light of midday cruising."; }
+    body.innerHTML =
+      '<div class="sun-grid">' +
+        '<div class="compass" role="img" aria-label="Compass showing the sun in the ' + compass(azDeg) + '">' +
+          '<span class="n">N</span><span class="s">S</span><span class="e">E</span><span class="w">W</span>' +
+          '<div class="sun-arrow" style="transform:rotate(' + azDeg + 'deg)"></div><div class="sun-dot"></div>' +
+        "</div>" +
+        "<div>" +
+          "<dl class='facts'>" +
+            fact("Sun azimuth", azDeg.toFixed(1) + "° — in the " + compass(azDeg)) +
+            fact("Sun elevation", altDeg.toFixed(1) + "° above horizon") +
+            fact("Light at the time", esc(dayPart)) +
+            fact("Calculated for", esc(fmtDate(time)) + "<small>At " + lat.toFixed(4) + ", " + lon.toFixed(4) + (manual ? " — your approximate hand-entered inputs" : "") + "</small>") +
+          "</dl>" +
+          "<p style='margin-top:12px'>" + esc(reading) + "</p>" +
+          (manual ? "<div class='missing-note'><strong>Approximate:</strong> this sun reading is calculated from the date/time and area you typed by hand, not from the photo's metadata. Good enough to orient shadows, not to pin anything precise.</div>" : "") +
+        "</div>" +
+      "</div>";
+    updateCaseFile();
+  }
+
+  /* ---------- Gemini key (BYOK) ---------- */
+  var KEY_NAME = "pff_gemini_key";
+  var MODEL_NAME = "pff_gemini_model";
+  var serverMode = false; /* true when served by server/server.js with GEMINI_API_KEY set */
+  function getKey(){ try{ return localStorage.getItem(KEY_NAME) || ""; }catch(e){ return ""; } }
+  function getModel(){
+    var v = ($("modelInput").value || "").trim();
+    return v || Core.DEFAULT_MODEL;
+  }
+  (function initModel(){
+    var saved = ""; try{ saved = localStorage.getItem(MODEL_NAME) || ""; }catch(e){}
+    $("modelInput").value = saved || Core.DEFAULT_MODEL;
+    $("modelInput").addEventListener("change", function(){
+      var v = $("modelInput").value.trim();
+      try{ if(v && v !== Core.DEFAULT_MODEL) localStorage.setItem(MODEL_NAME, v); else localStorage.removeItem(MODEL_NAME); }catch(e){}
+      if(!v) $("modelInput").value = Core.DEFAULT_MODEL;
+    });
+  })();
+  /* Pro mode: if a server with its own key is present, visitors don't need a key at all. */
+  fetch("api/config", {headers:{"Accept":"application/json"}})
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(cfg){
+      if(cfg && cfg.serverAnalysis){
+        serverMode = true;
+        $("serverBanner").classList.remove("hidden");
+        $("privacyNote").textContent = "🔒 METADATA IS READ IN YOUR BROWSER · THE PHOTO IS ONLY SENT FOR AI ANALYSIS WHEN YOU PRESS ANALYSE — PROCESSED IN MEMORY, NEVER STORED";
+        updateKeyUI();
+      }
+    })
+    .catch(function(){ /* static hosting — bring-your-own-key mode */ });
+  function updateKeyUI(){
+    var k = getKey();
+    var input = $("apiKeyInput");
+    if(k && !input.value) input.value = k;
+    $("keyStatus").innerHTML = k
+      ? '<span class="ok">✓ Key saved in this browser.</span> It is only ever sent to Google\'s Gemini API, from this device, when you press Analyse.'
+      : 'No key saved yet. It stays in this browser\'s local storage — never on any server of ours (there isn\'t one).';
+    var has = !!k || serverMode;
+    $("analyseBtn").disabled = false;
+    $("noKeyNote").classList.toggle("hidden", has);
+    $("keySettings").open = !has;
+  }
+  $("saveKeyBtn").addEventListener("click", function(){
+    var v = $("apiKeyInput").value.trim();
+    if(!v){ $("keyStatus").textContent = "Paste a key first — it starts with AIza…"; return; }
+    try{ localStorage.setItem(KEY_NAME, v); }catch(e){}
+    updateKeyUI();
+  });
+  $("clearKeyBtn").addEventListener("click", function(){
+    try{ localStorage.removeItem(KEY_NAME); }catch(e){}
+    $("apiKeyInput").value = "";
+    updateKeyUI();
+  });
+  updateKeyUI();
+
+  /* ---------- AI analysis: step 1 classifies the photo type, step 2 hunts that type's clues ---------- */
+  $("analyseBtn").addEventListener("click", analysePhoto);
+
+  /* Prompts, photo types and response checks live in js/investigator-core.js (shared with the server). */
+
+  function prepareImage(){
+    return new Promise(function(resolve, reject){
+      var url = URL.createObjectURL(state.file);
+      var img = new Image();
+      img.onload = function(){
+        var max = 1280, w = img.naturalWidth, h = img.naturalHeight;
+        var scale = Math.min(1, max / Math.max(w, h));
+        var c = document.createElement("canvas");
+        c.width = Math.round(w*scale); c.height = Math.round(h*scale);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        var durl = c.toDataURL("image/jpeg", 0.85);
+        resolve({ mime: "image/jpeg", b64: durl.split(",")[1] });
+      };
+      img.onerror = function(){ URL.revokeObjectURL(url); reject(new Error("Could not read this image in the browser. Try a JPG or PNG version of the photo.")); };
+      img.src = url;
+    });
+  }
+
+  /* One call path, two engines: the site's own server (Pro mode) or the visitor's key, straight to Google. */
+  async function callAI(step, typeId, prepared, key){
+    var userDetails = step === "investigate" ? buildUserDetails() : "";
+    if(serverMode && !key){
+      var r = await fetch("api/analyse", {
+        method: "POST", headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ step: step, typeId: typeId, userDetails: userDetails, image: prepared })
+      });
+      var j = await r.json().catch(function(){ return null; });
+      if(!r.ok || !j || !j.result) throw new Error((j && j.error) || ("Server returned HTTP " + r.status));
+      return j.result;
+    }
+    var prompt = step === "classify" ? Core.CLASSIFY_PROMPT : Core.buildPrompt(typeId, userDetails);
+    var res = await fetch(Core.geminiUrl(getModel()), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+      body: JSON.stringify(Core.geminiBody(prompt, prepared, step === "classify" ? 0.1 : 0.2))
+    });
+    var payload = await res.json().catch(function(){ return null; });
+    if(!res.ok) throw new Error(Core.friendlyGeminiError(res.status, payload));
+    var parsed = Core.parseModelJson(Core.geminiText(payload));
+    return step === "classify" ? Core.normalizeClassification(parsed) : Core.normalizeInvestigation(parsed);
+  }
+
+  /* Pass 5 of the method: hand the AI what the file and the user said, so it can flag contradictions. */
+  function buildUserDetails(){
+    var parts = [];
+    if(state.lat !== null) parts.push("File GPS: " + state.lat.toFixed(5) + ", " + state.lon.toFixed(5));
+    if(state.takenAt) parts.push("File date/time: " + state.takenAt.toString());
+    if(state.device) parts.push("Camera: " + state.device);
+    if(state.screenshot) parts.push("File looks like a SCREENSHOT (" + state.screenshot + ") — its timestamp is not the photo time");
+    if(state.manualTime) parts.push("User says taken around: " + state.manualTime.toString());
+    if(state.manualAreaName || ($("manualArea").value || "").trim()) parts.push("User says rough area: " + (state.manualAreaName || $("manualArea").value.trim()));
+    var extra = ($("userNotes") && $("userNotes").value || "").trim();
+    if(extra) parts.push("User notes: " + extra);
+    return parts.join("; ");
+  }
+
+  async function analysePhoto(){
+    var key = getKey() || $("apiKeyInput").value.trim();
+    if(!key && !serverMode){
+      $("keySettings").open = true;
+      $("apiKeyInput").focus();
+      $("keyStatus").textContent = "Add your free Gemini key here first — analysis runs on your own key.";
+      return;
+    }
+    if(!state.file) return;
+    var btn = $("analyseBtn");
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Classifying the photo type…';
+    $("aiError").classList.add("hidden");
+    try{
+      var prepared = await prepareImage();
+      /* Step 1 — classify the photo type. Key/auth/rate errors abort; a garbled answer just falls back to the general hunt. */
+      var typeId = null, cls = null;
+      try{
+        cls = await callAI("classify", null, prepared, key);
+        if(cls && cls.photoType && TYPES[cls.photoType]) typeId = cls.photoType;
+      }catch(e){
+        if(!/readable as data|empty answer/i.test(e.message)) throw e;
+      }
+      state.photoType = typeId;
+      state.typeInfo = cls || null;
+      /* interim: show the detected type while the clue hunt runs */
+      $("aiIdle").classList.add("hidden");
+      var t0 = typeId ? TYPES[typeId] : null;
+      var interim = $("aiResults");
+      interim.innerHTML =
+        '<div class="k mono" style="font-size:11px; letter-spacing:.15em; text-transform:uppercase; color:var(--muted)">Photo type detected</div>' +
+        '<div class="ai-verdict">' + (t0 ? t0.icon + " " + esc(t0.label) : "Unclassified — general hunt") + "</div>" +
+        '<p style="font-size:14px"><span class="spinner" style="border-color:var(--line2); border-top-color:var(--amber)"></span> Hunting the ' + (t0 ? esc(t0.label.toLowerCase()) : "general") + ' clues…</p>';
+      interim.classList.remove("hidden");
+      /* Step 2 — full analysis, routed by the detected type */
+      btn.innerHTML = '<span class="spinner"></span> Hunting the clues…';
+      var parsed = await callAI("investigate", typeId, prepared, key);
+      state.ai = parsed;
+      state.isFlight = !!parsed.isFlightPhoto;
+      renderAiResults(parsed);
+      updateFlightModule();
+      updateCaseFile();
+    }catch(err){
+      var box = $("aiError");
+      box.className = "error-box";
+      box.textContent = "Analysis failed: " + (err && err.message ? err.message : String(err));
+    }finally{
+      btn.disabled = false;
+      btn.innerHTML = "🔍 Analyse photo with AI";
+    }
+  }
+
+  function chip(label, value){
+    if(!value) return "";
+    return '<span class="chip"><b>' + esc(label) + "</b>" + esc(value) + "</span>";
+  }
+  function signsText(s){
+    if(!s) return "";
+    if(typeof s === "string") return s;
+    var parts = [];
+    if(s.text) parts.push("“" + s.text + "”");
+    if(s.language) parts.push(s.language);
+    if(s.script) parts.push(s.script + " script");
+    return parts.join(" · ");
+  }
+  function trafficText(t){
+    if(!t) return "";
+    if(typeof t === "string") return t;
+    var parts = [];
+    if(t.details) parts.push(t.details);
+    if(t.drivesOn && t.drivesOn !== "unknown") parts.push("traffic drives on the " + t.drivesOn);
+    return parts.join(" · ");
+  }
+
+  function renderAiResults(a){
+    var c = a.clues || {}, f = a.flight || {};
+    var typeId = state.photoType, t = typeId ? TYPES[typeId] : null;
+    var typeBlock, typeCluesHtml = "";
+    if(t){
+      var tconf = (state.typeInfo && state.typeInfo.confidence) || "low";
+      typeBlock =
+        '<div class="k mono" style="font-size:11px; letter-spacing:.15em; text-transform:uppercase; color:var(--muted)">Photo type — classified first</div>' +
+        '<div class="ai-verdict">' + t.icon + " " + esc(t.label) + ' <span class="conf">Classification: ' + esc(tconf) + "</span></div>" +
+        (state.typeInfo && state.typeInfo.reasoning ? '<p style="font-size:13.5px">' + esc(state.typeInfo.reasoning) + "</p>" : "");
+      /* type-routed clues — honest when none are readable */
+      var tc = a.typeClues || {};
+      var tcKeys = Object.keys(tc).filter(function(k){ return tc[k]; });
+      var tcChips = tcKeys.map(function(k){ return chip(k, tc[k]); }).join("");
+      var tcMissing = a.typeCluesMissing || [];
+      typeCluesHtml =
+        '<div class="refl-group" style="background:var(--paper2)">' +
+          '<div class="refl-head">' + t.icon + " " + esc(t.label) + " clues — this type's signature evidence</div>" +
+          (tcChips
+            ? '<div class="chips">' + tcChips + "</div>"
+            : "<p>None of this type's signature clues were readable in this photo — that's an honest finding, not a failure. It means the visual evidence alone can't pin the location.</p>") +
+          (tcMissing.length ? '<div class="refl-note">Looked for but not found: ' + esc(tcMissing.join("; ")) + ".</div>" : "") +
+        "</div>";
+    } else {
+      typeBlock =
+        '<div class="k mono" style="font-size:11px; letter-spacing:.15em; text-transform:uppercase; color:var(--muted)">Photo type</div>' +
+        "<p>Classification didn't land — the investigator ran the general clue hunt instead.</p>";
+    }
+    var chips = "";
+    chips += chip("Landmark / terrain feature", c.landmarks);
+    chips += chip("Signs & text", signsText(c.signsAndText));
+    chips += chip("Architecture", c.architecture);
+    chips += chip("Terrain", c.terrain);
+    chips += chip("Vegetation", c.vegetation);
+    chips += chip("Vehicles & traffic", trafficText(c.vehiclesAndTraffic));
+    chips += chip("Clothing & people", c.clothing);
+    chips += chip("Shops & brands", c.shopsAndBrands);
+    chips += chip("Light direction", c.lightDirection);
+    if(a.isFlightPhoto || state.photoType === "flight" || state.photoType === "airport"){
+      chips += chip("✈ Terrain below", f.terrainBelow);
+      chips += chip("✈ Water bodies", f.waterBodies);
+      chips += chip("✈ Aircraft features", f.aircraftFeatures);
+      chips += chip("✈ Airline livery", f.airlineLivery);
+      if(f.windowSide && f.windowSide !== "unknown") chips += chip("✈ Window side", f.windowSide + " side of the cabin");
+    }
+    var conf = (a.locationConfidence || "low").toLowerCase();
+    /* distinct reflection-clue group, kept honest: mirrored & partial */
+    var r = a.reflections || {};
+    var reflHtml = "";
+    if(r && (r.surfaces !== undefined || r.shows !== undefined || r.behindCamera !== undefined)){
+      var reflChips = "";
+      reflChips += chip("Reflective surfaces", r.surfaces);
+      reflChips += chip("Reflection shows", r.shows);
+      reflChips += chip("Behind the camera", r.behindCamera);
+      reflHtml =
+        '<div class="refl-group">' +
+          '<div class="refl-head">🪞 Reflection clues — what bounces back</div>' +
+          (reflChips ? '<div class="chips">' + reflChips + "</div>" : "<p>No readable reflections were found in this photo.</p>") +
+          '<div class="refl-note">Reflections are mirrored and partial — they often reveal the scene <em>behind</em> the camera, which the direct scene never shows. Treat these as suggestive hints to cross-check, never as proof on their own.</div>' +
+        "</div>";
+    }
+    var html = typeBlock + typeCluesHtml +
+      '<div class="k mono" style="font-size:11px; letter-spacing:.15em; text-transform:uppercase; color:var(--muted)">AI\'s most likely location</div>' +
+      '<div class="ai-verdict">' + esc(a.mostLikelyLocation || "Cannot tell") + ' <span class="conf ' + (conf === "high" ? "high" : "") + '">Confidence: ' + esc(conf) + "</span></div>" +
+      (a.locationReasoning ? "<p>" + esc(a.locationReasoning) + "</p>" : "") +
+      (a.runnerUp ? '<p><strong>Runner-up:</strong> ' + esc(a.runnerUp) + (a.separatingEvidence ? ' — <em>what would settle it:</em> ' + esc(a.separatingEvidence) : "") + "</p>" : "") +
+      (chips ? '<div class="chips">' + chips + "</div>" : "<p>No specific visual clues could be extracted from this photo.</p>") +
+      reflHtml +
+      (a.summary ? "<p><strong>Investigator's summary:</strong> " + esc(a.summary) + "</p>" : "") +
+      (a.unknowns && a.unknowns.length ? '<div class="refl-group"><div class="refl-head">? Still unknown — the AI\'s own list</div><ul style="margin:0; padding-left:18px; line-height:1.6; color:var(--ink2); font-size:14px">' + a.unknowns.map(function(u){ return "<li>" + esc(u) + "</li>"; }).join("") + "</ul></div>" : "") +
+      '<div class="btnrow"><button class="btn ghost small" id="reanalyseBtn" type="button">↻ Run the analysis again</button></div>' +
+      '<p style="font-size:13px">AI guesses can be wrong — treat the location above as a lead to verify (signs, plates and landmarks in the original photo are your cross-check), not as proof.</p>';
+    var box = $("aiResults");
+    box.innerHTML = html;
+    box.classList.remove("hidden");
+    $("aiIdle").classList.add("hidden");
+    $("reanalyseBtn").addEventListener("click", function(){
+      box.classList.add("hidden"); $("aiIdle").classList.remove("hidden");
+      $("analyseBtn").scrollIntoView({behavior:"smooth", block:"center"});
+    });
+  }
+
+  /* ---------- flight module ---------- */
+  function updateFlightModule(){
+    var ft = state.photoType;
+    var flightish = (ft === "flight" || ft === "airport") || state.isFlight;
+    if(flightish){ showFlightModule(); }
+    else if(state.ai){ /* not a flight/airport photo: offer manual override */
+      $("flightPanel").classList.add("hidden");
+      $("flightToggleWrap").classList.remove("hidden");
+    }
+  }
+  function showFlightModule(){
+    var a = state.ai || {}, f = a.flight || {};
+    if(state.photoType === "airport"){
+      $("flightIntro").textContent = "This looks like an airport or station photo, so the flight cross-check module opens too — registrations, liveries and gate/stand numbers are the leads here, the reel's way.";
+    } else {
+      $("flightIntro").textContent = "This photo looks like it was taken from a plane, so the flight cross-check opens up. This is exactly how the reel's creator finished the job:";
+    }
+    if(state.takenAt) $("flightWindow").textContent = "the photo was taken " + fmtDate(state.takenAt) + " — search playback ±30 minutes around that moment";
+    if(state.lat !== null) $("flightPlace").textContent = "the camera's GPS puts the plane at " + state.lat.toFixed(4) + ", " + state.lon.toFixed(4) + " — centre the playback map there";
+    else if(f.terrainBelow) $("flightPlace").textContent = "no GPS in the file, so use what the AI saw below: " + f.terrainBelow + (f.waterBodies ? " · " + f.waterBodies : "");
+    if(f.windowSide && f.windowSide !== "unknown") $("flightSeat").textContent = "the AI puts this on the " + f.windowSide + " side of the cabin — on playback, only routes flying the right direction put that terrain on that side";
+    if(f.airlineLivery) $("flightIntro").textContent = "This photo looks like it was taken from a plane — and the AI spotted livery clues (" + f.airlineLivery + "). Cross-check it the way the reel's creator did:";
+
+    var fr = "https://www.flightradar24.com/", fa = "https://www.flightaware.com/live/";
+    if(state.lat !== null){ fr = "https://www.flightradar24.com/" + state.lat.toFixed(4) + "," + state.lon.toFixed(4) + "/9"; }
+    $("fr24Link").href = fr;
+    $("faLink").href = fa;
+    $("flightPanel").classList.remove("hidden");
+    $("flightToggleWrap").classList.add("hidden");
+  }
+  function hideFlightModule(){
+    $("flightPanel").classList.add("hidden");
+    $("flightToggleWrap").classList.add("hidden");
+  }
+  $("flightToggleBtn").addEventListener("click", function(){
+    state.isFlight = true;
+    showFlightModule();
+    updateCaseFile();
+    $("flightPanel").scrollIntoView({behavior:"smooth", block:"start"});
+  });
+
+  /* ---------- case file ---------- */
+  function updateCaseFile(){
+    if(!state.file) return;
+    $("caseDate").textContent = state.takenAt ? fmtDate(state.takenAt) : "Date unknown";
+
+    var known = [], likely = [], unknown = [];
+    if(state.takenAt) known.push("Taken " + fmtDate(state.takenAt));
+    if(state.lat !== null) known.push("GPS: " + state.lat.toFixed(5) + ", " + state.lon.toFixed(5) + " (from the file itself)");
+    if(state.device) known.push("Shot on " + state.device);
+    if(state.dimensions) known.push("Image size " + state.dimensions);
+    if(state.sun) known.push("Sun was at " + state.sun.az.toFixed(0) + "° (" + compass(state.sun.az) + "), " + state.sun.alt.toFixed(0) + "° up — matches the light in the frame" + (state.sun.manual ? " (from your approximate hand-entered date & place)" : ""));
+
+    var a = state.ai;
+    /* reflections: what the mirror world shows vs the direct scene */
+    var refl = [], reflDirect = "—";
+    if(a){
+      reflDirect = a.summary || (a.clues && a.clues.landmarks) || "—";
+      var rr = a.reflections || {};
+      if(rr.surfaces) refl.push("Surfaces: " + rr.surfaces);
+      if(rr.shows){ refl.push("Shows: " + rr.shows); likely.push("🪞 Reflection shows: " + rr.shows); }
+      if(rr.behindCamera) refl.push("Behind camera: " + rr.behindCamera);
+    }
+    known.push("File: " + state.fileName);
+    var t2 = state.photoType && TYPES[state.photoType];
+    if(a){
+      if(a.mostLikelyLocation && a.mostLikelyLocation !== "Cannot tell") likely.push("Location: " + a.mostLikelyLocation + " (" + (a.locationConfidence || "low") + " confidence)");
+      var c = a.clues || {};
+      if(c.landmarks) likely.push("Landmarks/terrain: " + c.landmarks);
+      var st = signsText(c.signsAndText); if(st) likely.push("Signs & language: " + st);
+      if(c.architecture) likely.push("Architecture: " + c.architecture);
+      var tv = trafficText(c.vehiclesAndTraffic); if(tv) likely.push("Traffic: " + tv);
+      if(t2){
+        var tcv = a.typeClues || {};
+        var tck = Object.keys(tcv).filter(function(k){ return tcv[k]; });
+        if(tck.length) likely.push(t2.label + " clues: " + tck.slice(0,3).map(function(k){ return k + " — " + tcv[k]; }).join("; "));
+      }
+      if(a.isFlightPhoto || state.photoType === "flight" || state.photoType === "airport"){
+        var f = a.flight || {};
+        if(f.airlineLivery) likely.push("Airline clue: " + f.airlineLivery);
+        if(f.windowSide && f.windowSide !== "unknown") likely.push("Window: " + f.windowSide + " side of the cabin");
+        if(f.terrainBelow) likely.push("Below the plane: " + f.terrainBelow);
+      }
+    }
+
+    if(state.lat === null) unknown.push("Exact GPS position — stripped from this file");
+    if(!state.takenAt) unknown.push(state.screenshotTime ? "When the original photo was taken — the file's time is the screenshot's, not the photo's" : "Exact date & time the photo was taken");
+    if(!a) unknown.push("What the picture itself shows — run the AI analysis (Step 3)");
+    else if(!a.mostLikelyLocation || a.mostLikelyLocation === "Cannot tell") unknown.push("The location — visual clues were too weak to place it");
+    if(a && a.isFlightPhoto) unknown.push("Exact flight number & seat — only settled by matching playback terrain (flight module above)");
+    if(a && t2){
+      var tck2 = a.typeClues || {};
+      var tckEmpty = !Object.keys(tck2).some(function(k){ return tck2[k]; });
+      if(tckEmpty) unknown.push("This photo shows none of its type's (" + t2.label + ") usual location clues — the visual evidence can't pin it, and grading it low is the honest verdict");
+    }
+    if(a && a.unknowns) a.unknowns.slice(0, 4).forEach(function(u){ unknown.push("AI: " + u); });
+    if(a && a.runnerUp) likely.push("Runner-up: " + a.runnerUp + (a.separatingEvidence ? " (settle it with: " + a.separatingEvidence + ")" : ""));
+    if(state.screenshot) known.push("Screenshot detected — " + state.screenshot);
+    if(!unknown.length) unknown.push("Nothing major — cross-check the AI's location lead against the map to close the case");
+
+    /* headline place + confidence */
+    var place = "Still investigating…", confText = "Confidence: gathering evidence", confClass = "";
+    if(state.lat !== null){
+      place = state.lat.toFixed(4) + "°, " + state.lon.toFixed(4) + "° — pinned by the photo's own GPS";
+      confText = "Confidence: high — from metadata"; confClass = "high";
+      if(a && a.mostLikelyLocation && a.mostLikelyLocation !== "Cannot tell"){
+        place = a.mostLikelyLocation;
+        confText = "Confidence: high — GPS in file + AI agrees on the area";
+      }
+    } else if(a && a.mostLikelyLocation && a.mostLikelyLocation !== "Cannot tell"){
+      place = a.mostLikelyLocation;
+      confText = "Confidence: " + (a.locationConfidence || "low") + " — AI visual clues only, no GPS in file";
+      confClass = (a.locationConfidence === "high") ? "high" : "";
+    } else if(a){
+      place = "Location not pinned yet";
+      confText = "Confidence: low — clues too weak so far";
+    }
+    $("casePlace").textContent = place;
+    var confEl = $("caseConf");
+    confEl.textContent = confText;
+    confEl.className = "conf" + (confClass ? " high" : "");
+    $("caseType").textContent = "📸 Type: " + (t2 ? t2.label : (a ? "Unclassified" : "—"));
+
+    $("caseKnown").innerHTML = liList(known, "Nothing confirmed yet");
+    $("caseLikely").innerHTML = liList(likely, a ? "No visual leads extracted" : "Run the AI analysis to fill this in");
+    $("caseUnknown").innerHTML = liList(unknown, "—");
+    $("caseFootMeta").textContent =
+      "SUBJECT: " + (state.fileName.length > 24 ? state.fileName.slice(0,22) + "…" : state.fileName).toUpperCase() +
+      " · TYPE: " + (t2 ? t2.label.toUpperCase() : "TBD") +
+      " · GPS: " + (state.lat !== null ? "✓" : "✗");
+
+    state._case = { place: place, conf: confText, known: known, likely: likely, unknown: unknown, refl: refl, reflDirect: reflDirect,
+                    photoType: (t2 ? t2.label + " (classification confidence: " + ((state.typeInfo && state.typeInfo.confidence) || "low") + ")" : (a ? "Unclassified" : "—")) };
+  }
+
+  $("downloadBtn").addEventListener("click", function(){
+    var c = state._case; if(!c) return;
+    function block(title, arr){ return title + "\n" + (arr.length ? arr.map(function(x){ return " - " + x; }).join("\n") : " - (none)") + "\n"; }
+    var txt =
+      "PHOTO INVESTIGATOR — CASE FILE " + caseNo + "\n" +
+      "================================================\n" +
+      "Photo: " + state.fileName + "\n" +
+      "Photo type: " + (c.photoType || "—") + "\n" +
+      "Most likely location: " + c.place + "\n" + c.conf + "\n\n" +
+      block("KNOWN — FROM METADATA", c.known) + "\n" +
+      block("SUGGESTED — VISUAL CLUES", c.likely) + "\n" +
+      block("STILL UNKNOWN", c.unknown) + "\n" +
+      block("REFLECTION CLUES — MIRRORED, SUGGESTIVE ONLY", (c.refl && c.refl.length ? c.refl : []).concat(["Direct scene shows: " + c.reflDirect])) + "\n" +
+      "Note: AI location guesses are leads, not proof. Exact flight/seat claims\nrequire matching flight-playback terrain to the photo.\n";
+    var blob = new Blob([txt], {type:"text/plain"});
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "case-file-" + caseNo.toLowerCase() + ".txt";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 2000);
+  });
+
+  /* ---------- shareable case card (PNG) — the share loop ---------- */
+  function wrapLines(ctx, text, maxW, maxLines){
+    var words = String(text).split(/\s+/), lines = [], cur = "";
+    for(var i = 0; i < words.length; i++){
+      var test = cur ? cur + " " + words[i] : words[i];
+      if(ctx.measureText(test).width > maxW && cur){ lines.push(cur); cur = words[i]; } else cur = test;
+      if(lines.length === maxLines) break;
+    }
+    if(lines.length < maxLines && cur) lines.push(cur);
+    if(lines.length === maxLines && (words.join(" ").length > lines.join(" ").length)){
+      var last = lines[maxLines-1];
+      while(ctx.measureText(last + "…").width > maxW && last.length) last = last.slice(0, -1);
+      lines[maxLines-1] = last + "…";
+    }
+    return lines;
+  }
+  function loadImg(src){
+    return new Promise(function(res, rej){ var i = new Image(); i.onload = function(){ res(i); }; i.onerror = rej; i.src = src; });
+  }
+  async function renderCard(){
+    var c = state._case; if(!c) return null;
+    try{ if(document.fonts && document.fonts.ready) await document.fonts.ready; }catch(e){}
+    var W = 1080, H = 1350, P = 72;
+    var cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+    var x = cv.getContext("2d");
+    var serif = '"Newsreader", Georgia, serif', sans = '"Public Sans", system-ui, sans-serif', mono = '"IBM Plex Mono", ui-monospace, monospace';
+    /* paper */
+    x.fillStyle = "#f7ecd7"; x.fillRect(0, 0, W, H);
+    x.strokeStyle = "rgba(180,120,40,.10)"; x.lineWidth = 1;
+    for(var g = 0; g < W; g += 54){ x.beginPath(); x.moveTo(g, 0); x.lineTo(g, H); x.stroke(); }
+    for(var g2 = 0; g2 < H; g2 += 54){ x.beginPath(); x.moveTo(0, g2); x.lineTo(W, g2); x.stroke(); }
+    /* header band */
+    x.fillStyle = "#2b2015"; x.fillRect(0, 0, W, 112);
+    x.fillStyle = "#f6ead2"; x.font = "600 26px " + mono; x.textBaseline = "middle";
+    x.fillText("🔍 PHOTO INVESTIGATOR — CASE FILE", P, 56);
+    x.textAlign = "right"; x.fillText("№ " + caseNo, W - P, 56); x.textAlign = "left";
+    var y = 168, hasPhoto = false;
+    /* optional photo thumbnail */
+    if($("cardPhoto").checked && $("previewImg").src){
+      try{
+        var img = await loadImg($("previewImg").src);
+        var tw = W - 2*P, th = 320, s = Math.max(tw/img.naturalWidth, th/img.naturalHeight);
+        var sw = tw/s, sh = th/s, sx = (img.naturalWidth - sw)/2, sy = (img.naturalHeight - sh)/2;
+        x.save(); x.beginPath(); x.roundRect ? x.roundRect(P, y, tw, th, 18) : x.rect(P, y, tw, th); x.clip();
+        x.drawImage(img, sx, sy, sw, sh, P, y, tw, th); x.restore();
+        y += th + 44; hasPhoto = true;
+      }catch(e){}
+    }
+    x.textBaseline = "alphabetic";
+    x.fillStyle = "#857252"; x.font = "600 22px " + mono;
+    x.fillText("MOST LIKELY LOCATION", P, y); y += 64;
+    x.fillStyle = "#2b2015"; x.font = "800 58px " + serif;
+    wrapLines(x, c.place, W - 2*P, 2).forEach(function(l){ x.fillText(l, P, y); y += 66; });
+    y += 4;
+    /* confidence + type pills */
+    function pill(text, px, color, bg){
+      x.font = "600 22px " + mono;
+      var w = x.measureText(text).width + 36;
+      x.fillStyle = bg; x.strokeStyle = color; x.lineWidth = 2.5;
+      x.beginPath(); x.roundRect ? x.roundRect(px, y - 30, w, 44, 22) : x.rect(px, y - 30, w, 44); x.fill(); x.stroke();
+      x.fillStyle = color; x.fillText(text, px + 18, y);
+      return px + w + 14;
+    }
+    var high = /high/i.test(c.conf);
+    var nx = pill(c.conf.replace(/^Confidence:\s*/i, "CONFIDENCE: ").split(" — ")[0].toUpperCase(), P, high ? "#4d7c0f" : "#b45309", high ? "#eef5d8" : "#fde9bd");
+    if(c.photoType && c.photoType !== "—") pill("TYPE: " + c.photoType.split(" (")[0].toUpperCase(), nx, "#57452e", "#fffaf0");
+    y += 56;
+    /* perforation */
+    x.setLineDash([12, 10]); x.strokeStyle = "#cdb280"; x.lineWidth = 3;
+    x.beginPath(); x.moveTo(P, y); x.lineTo(W - P, y); x.stroke(); x.setLineDash([]);
+    y += 54;
+    function section(title, items, color, maxItems){
+      if(y > H - 230) return;
+      x.fillStyle = color; x.font = "600 22px " + mono; x.fillText(title, P, y); y += 40;
+      x.fillStyle = "#57452e"; x.font = "500 27px " + sans;
+      var list = items.length ? items.slice(0, maxItems) : ["—"];
+      list.forEach(function(it){
+        if(y > H - 200) return;
+        var lines = wrapLines(x, it, W - 2*P - 30, 2);
+        x.fillText("•", P, y);
+        lines.forEach(function(l){ x.fillText(l, P + 30, y); y += 36; });
+        y += 6;
+      });
+      y += 22;
+    }
+    var knownForCard = c.known.filter(function(k){ return !/^File: |^Image size /.test(k); });
+    var tight = hasPhoto; /* photo included: fewer lines per section so "still unknown" always fits */
+    section("✓ KNOWN — FROM METADATA", knownForCard, "#4d7c0f", tight ? 2 : 3);
+    section("◐ SUGGESTED — VISUAL CLUES", c.likely, "#b45309", tight ? 2 : 4);
+    section("? STILL UNKNOWN", c.unknown, "#b91c1c", tight ? 1 : 2);
+    /* barcode + footer */
+    var by = H - 150;
+    x.fillStyle = "#2b2015";
+    for(var bx = P, i = 0; bx < W - P; i++){ var bw = [2,1,3,1,2,4,1][i % 7]; x.fillRect(bx, by, bw*2, 52); bx += bw*2 + [3,5,2,4,3][i % 5]; }
+    x.fillStyle = "#857252"; x.font = "500 20px " + mono;
+    x.fillText("AI leads, not proof · honest confidence levels · analyse only your own photos", P, H - 58);
+    return cv;
+  }
+  $("cardBtn").addEventListener("click", async function(){
+    var btn = $("cardBtn"); btn.disabled = true;
+    try{
+      var cv = await renderCard(); if(!cv) return;
+      var blob = await new Promise(function(r){ cv.toBlob(r, "image/png"); });
+      var fname = "case-card-" + caseNo.toLowerCase() + ".png";
+      var file = (typeof File === "function") ? new File([blob], fname, {type:"image/png"}) : null;
+      if(file && navigator.canShare && navigator.canShare({files:[file]}) && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)){
+        try{ await navigator.share({files:[file], title:"Photo Investigator case file"}); return; }catch(e){ if(e && e.name === "AbortError") return; }
+      }
+      var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = fname;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(a.href); }, 2000);
+    } finally { btn.disabled = false; }
+  });
+
+  $("resetBtn").addEventListener("click", function(){
+    state = { file:null, fileName:"", exif:null, lat:null, lon:null, takenAt:null, device:"", sun:null, ai:null, isFlight:false, photoType:null, typeInfo:null, flightTouched:false,
+              manualTime:null, manualLat:null, manualLon:null, manualAreaName:"" };
+    fileInput.value = "";
+    setZoom(100);
+    $("noMetaBanner").innerHTML = "";
+    $("manualBox").classList.add("hidden");
+    $("manualTime").value = ""; $("manualArea").value = ""; $("manualStatus").innerHTML = "";
+    ["evidencePanel","sunPanel","aiPanel","caseFile","resetRow"].forEach(function(id){ $(id).classList.add("hidden"); });
+    hideFlightModule();
+    window.scrollTo({top:0, behavior:"smooth"});
+  });
+
+  /* ---------- photo zoom (inspect small reflections) ---------- */
+  var zoomLevel = 100;
+  function setZoom(z){
+    z = Math.max(100, Math.min(350, Math.round(z)));
+    zoomLevel = z;
+    $("previewImg").style.width = z + "%";
+    $("zoomRange").value = z;
+    $("zoomLabel").textContent = z + "%";
+    $("photoScroll").classList.toggle("zoomed", z > 100);
+  }
+  $("zoomRange").addEventListener("input", function(){ setZoom(+$("zoomRange").value); });
+  $("zoomIn").addEventListener("click", function(){ setZoom(zoomLevel + 50); });
+  $("zoomOut").addEventListener("click", function(){ setZoom(zoomLevel - 50); });
+  $("photoScroll").addEventListener("click", function(){ setZoom(zoomLevel > 100 ? 100 : 250); });
+
+  /* ---------- hand-entered date/time/area for the sun clue ---------- */
+  function toLocalISO(d){
+    var p = function(n){ return (n < 10 ? "0" : "") + n; };
+    return d.getFullYear() + "-" + p(d.getMonth()+1) + "-" + p(d.getDate()) + "T" + p(d.getHours()) + ":" + p(d.getMinutes());
+  }
+  $("manualApply").addEventListener("click", function(){
+    var st = $("manualStatus");
+    var t = $("manualTime").value, area = $("manualArea").value.trim();
+    state.manualTime = t ? new Date(t) : null;
+    if(state.manualTime && isNaN(state.manualTime)){ state.manualTime = null; st.textContent = "That date/time didn't parse — try the picker again."; return; }
+    var haveTime = !!state.manualTime || !!state.takenAt;
+    var havePlace = state.lat !== null || area !== "";
+    if(!haveTime && !havePlace){ st.textContent = "Type at least a date/time or a rough area — otherwise there's nothing new to calculate."; return; }
+    st.textContent = area ? "Looking up that area…" : "Applying…";
+    function done(){
+      renderSun(); updateCaseFile();
+      st.textContent = (state.manualTime || state.manualAreaName)
+        ? "Applied — see the sun panel (marked approximate)."
+        : "Nothing new entered yet.";
+      if(state.sun) $("sunPanel").scrollIntoView({behavior:"smooth", block:"start"});
+    }
+    if(area){
+      fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&addressdetails=0&q=" + encodeURIComponent(area), {headers:{"Accept":"application/json"}})
+        .then(function(r){ return r.json(); })
+        .then(function(j){
+          if(j && j.length){
+            state.manualLat = parseFloat(j[0].lat); state.manualLon = parseFloat(j[0].lon);
+            state.manualAreaName = j[0].display_name.split(",").slice(0,2).join(",").trim();
+            done();
+          } else {
+            state.manualLat = null; state.manualLon = null;
+            st.textContent = "Couldn't find that area — try just a city name, or leave it blank.";
+          }
+        })
+        .catch(function(){ state.manualLat = null; state.manualLon = null; st.textContent = "Area lookup failed (connection?) — the date/time alone can still work if the photo had GPS."; });
+    } else {
+      state.manualLat = null; state.manualLon = null; state.manualAreaName = "";
+      done();
+    }
+  });
+
+  /* ---------- Analyse with Muse — copy a ready-made prompt ---------- */
+  var MUSE_PROMPT = [
+    "You are a photo-location investigator. I will attach a photo — work out where and when it was taken.",
+    "",
+    "0. PHOTO TYPE: first classify the photo — street, selfie, flight, airport, indoor, food, nature, screenshot, vehicle or document — state the type and your confidence, and focus your clue hunt on that type's signature clues.",
+    "",
+    "1. MOST LIKELY LOCATION: give your single best guess (place / city / region / country), a confidence level (low / medium / high), and 1–2 sentences of reasoning.",
+    "2. VISUAL CLUES: list what you can read in the frame — landmarks, terrain, signs and text (with language and script), architecture, vegetation, vehicles and which side of the road traffic drives on, clothing, shops and brands, and where the light comes from.",
+    "3. REFLECTION CLUES: specifically inspect every reflective surface (sunglasses, chrome helmets, mirrors, glass windows and doors, phone/TV screens, car paint, water). Describe what the reflections show — buildings, signs or text, road markings, landscape, sky/light. Remember: reflections are MIRRORED and often show the scene BEHIND the camera. Label these as suggestive only — never conclusive on their own.",
+    "4. MY DETAILS: I may paste extra info below (camera, date, GPS, where I was). Cross-check it against the visual evidence and flag any contradictions.",
+    "5. FLIGHT PHOTOS: if this was taken from a plane, also note terrain below, water bodies, aircraft features, airline livery and window side — then suggest how to cross-check likely flights on Flightradar24/FlightAware playback (time ±30 min, location).",
+    "",
+    "Be honest: never claim an exact location, flight number or seat from weak clues — lower the confidence instead.",
+    "",
+    "My details: [paste here — camera, date, GPS, context, if you have them]"
+  ].join("\n");
+  $("copyMuseBtn").addEventListener("click", function(){
+    var done = function(){ $("copyStatus").innerHTML = '<span class="ok">✓ Copied.</span> Open the Muse app or site, attach the same photo, and paste it in.'; };
+    var fail = function(){ $("copyStatus").textContent = "Copy didn't work in this browser — the prompt text is in the page source; select and copy it manually."; };
+    function fallbackCopy(){
+      var ta = document.createElement("textarea");
+      ta.value = MUSE_PROMPT; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      try{ document.execCommand("copy") ? done() : fail(); }catch(e){ fail(); }
+      ta.remove();
+    }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(MUSE_PROMPT).then(done, fallbackCopy);
+    } else { fallbackCopy(); }
+  });
+})();
+</script>
+</body>
+</html>

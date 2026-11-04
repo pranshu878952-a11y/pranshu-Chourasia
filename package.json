@@ -1,0 +1,12 @@
+{
+  "name": "photo-investigator",
+  "version": "2.0.0",
+  "description": "Upload any photo and investigate where and when it was taken — EXIF metadata, sun position, and AI visual & reflection clues with honest confidence levels.",
+  "private": true,
+  "license": "UNLICENSED",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node server/server.js",
+    "test": "node --test test/*.test.js"
+  }
+}
